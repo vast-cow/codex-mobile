@@ -275,4 +275,3 @@ Built for speed, portability, and a little bit of chaos 😏
 
 ---
 
-Forked from [pavel-voronin/codex-web-local](https://github.com/pavel-voronin/codex-web-local) by Pavel Voronin.
