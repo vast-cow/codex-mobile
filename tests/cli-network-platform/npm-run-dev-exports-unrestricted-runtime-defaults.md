@@ -1,19 +1,17 @@
-### Feature: npm run dev exports unrestricted runtime defaults
+### Feature: Dev startup inherits the Codex sandbox
 
 #### Prerequisites
-- Node and pnpm are installed.
-- No shell-level `CODEXUI_SANDBOX_MODE` or `CODEXUI_APPROVAL_POLICY` overrides are set.
+- Node/pnpm and dependencies available; unset `CODEXUI_SANDBOX_MODE` and `CODEXUI_APPROVAL_POLICY` in the test process.
 
 #### Steps
-1. Run `npm run dev` from the repository root.
-2. In a second terminal, run `ps eww -p $(pgrep -f "vite" | head -n 1)`.
-3. Confirm the process environment contains `CODEXUI_SANDBOX_MODE=danger-full-access` and `CODEXUI_APPROVAL_POLICY=never`.
-4. Stop dev server and run `CODEXUI_SANDBOX_MODE=workspace-write CODEXUI_APPROVAL_POLICY=on-request npm run dev`.
-5. Re-check the Vite process environment values.
+1. Run `pnpm run dev --host 127.0.0.1 --port 4173` from the current checkout.
+2. Inspect the Vite process environment: sandbox is unset and approval policy is never.
+3. In a separate disposable test process, launch with `CODEXUI_SANDBOX_MODE=workspace-write CODEXUI_APPROVAL_POLICY=on-request pnpm run dev --host 127.0.0.1 --port 4174`.
+4. Inspect that process's environment and spawned app-server arguments.
 
 #### Expected Results
-- Default `npm run dev` includes `CODEXUI_SANDBOX_MODE=danger-full-access` and `CODEXUI_APPROVAL_POLICY=never`.
-- Explicit shell overrides still take precedence when provided.
+- Dev startup no longer injects danger-full-access.
+- Explicit environment settings remain effective.
 
 #### Rollback/Cleanup
-- Stop running dev servers and unset temporary env overrides.
+- Stop the disposable 4174 process and remove overrides. Do not stop persistent 5173 or shared 4173 servers.

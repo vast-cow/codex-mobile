@@ -1,21 +1,18 @@
-### Feature: Tunnel auto mode follows Tailscale IP detection
+### Feature: Cloudflare tunnel is explicitly enabled
 
 #### Prerequisites
-- App is running from this repository via CLI.
-- One environment with detected Tailscale IP (`100.64.0.0/10` or `fd7a:115c:a1e0::/48`) and one without (or simulated by disabling Tailscale).
+- Build the current CLI. Test on a host with Tailscale and one without, when available.
 
 #### Steps
-1. Start server without explicit tunnel flags: `npx codexapp --port 5900`.
-2. In a host where Tailscale IP is detected, verify startup output includes `Tunnel:`.
-3. In a host where Tailscale IP is not detected, verify startup output does not include `Tunnel:`.
-4. Start server with explicit override `--no-tunnel` and verify no `Tunnel:` output even when Tailscale IP is present.
-5. Start server with explicit override `--tunnel` and verify `Tunnel:` output even when Tailscale IP is not present.
+1. Run `node dist-cli/index.js --port 4190 --no-open --no-login` without tunnel flags.
+2. Confirm no cloudflared child is started, regardless of Tailscale detection.
+3. Repeat with `--no-tunnel`; confirm the same result.
+4. Run with `--tunnel`; confirm tunnel startup is attempted and the URL is printed when cloudflared succeeds.
+5. Check startup output does not include a hardcoded GitHub repository link.
 
 #### Expected Results
-- Without explicit flags, tunnel enablement follows Tailscale IP detection.
-- `--no-tunnel` always disables tunnel startup.
-- `--tunnel` always enables tunnel startup.
+- Tunnel default is off. Tailscale address reporting still works independently.
+- Only explicit `--tunnel` enables the tunnel.
 
 #### Rollback/Cleanup
-- Stop the CLI process after each verification run.
-- Ensure cloudflared child process exits after shutdown.
+- Stop test CLI processes and verify their cloudflared children exit.

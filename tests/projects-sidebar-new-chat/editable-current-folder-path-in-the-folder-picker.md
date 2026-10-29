@@ -1,31 +1,23 @@
-### Editable current folder path in the folder picker
+### Feature: Explicit folder browsing and selection
 
-#### Feature/Change Name
-The `Select folder` dialog now lets the user edit the current folder path directly, reload that folder on `Enter` or blur, and open the typed path without first clicking a child row.
-
-#### Prerequisites/Setup
-1. Dev server running (`pnpm run dev`)
-2. Open the home/new-thread route
-3. Have at least two accessible local directories available for navigation
-4. Light theme and dark theme both available from the appearance switcher
+#### Prerequisites
+- Start the current checkout with `pnpm run dev --host 127.0.0.1 --port 4173`.
+- Have two accessible directories and a child folder; open the home route.
 
 #### Steps
-1. In light theme, open the `Select folder` dialog from the new-thread folder chooser
-2. Confirm the `Current folder` field is an editable text input instead of static text
-3. Type a different absolute path and press `Enter`
-4. Confirm the folder list reloads for the typed path
-5. Edit the path again, click outside the input, and confirm blur also reloads the listing
-6. Type a valid absolute path and click `Open`
-7. Reopen the dialog, switch to dark theme, and confirm the editable current-folder input remains readable and focusable
+1. Open **Select folder**. Type another absolute path, then click the Current folder label.
+2. Confirm blur sends no directory-list request and does not select a project.
+3. Click **Browse**; confirm the list navigates to the typed directory.
+4. Type another valid path and press Enter; confirm only the listing changes.
+5. Click a child folder name to browse; click its separate **Select** button to select it.
+6. Reopen the picker, type a valid path, and click the top **Select** button without browsing first.
+7. Repeat in light/dark themes at 1440x1000, 375x812, and 768x1024.
 
 #### Expected Results
-- The current-folder path can be typed into directly
-- Pressing `Enter` on a changed path reloads the folder listing for that path
-- Blurring a changed path also reloads the folder listing for that path
-- Clicking `Open` uses the typed path when it is valid
-- The input remains readable and has visible focus treatment in both light theme and dark theme
+- Browse/Enter navigate; Select commits the chosen path and closes the dialog.
+- Blur does not trigger a request or change the selected project.
+- The path has its own row, with readable controls and no horizontal overflow.
+- Folder rows, input, and dialog have dark surfaces and readable text in dark theme.
 
 #### Rollback/Cleanup
-- Return the chooser to the original folder if the test changed the selected project path
-
----
+- Return to the original project. Leave the shared verification server on 4173 running.

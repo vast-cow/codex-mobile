@@ -1,8 +1,10 @@
 # Skills, Plugins, and Integrations
 
-Skills Hub, skill sync, plugin/app directory surfaces, prompts, Composio, Telegram, and installed skill behavior.
+Local Skills Hub, plugin/app directory surfaces, prompts, Telegram, and installed skills; retired integration cases are retained for reference.
 
 Return to the [manual test index](../../tests.md).
+
+GitHub/Firebase skill sync, Composio, and the first-launch announcement were removed by the vast-cow import. Their existing cases below are retained as historical coverage and are not current acceptance requirements. Use the local-skills/navigation case for current behavior.
 
 ## Test Sections
 
@@ -35,3 +37,4 @@ Return to the [manual test index](../../tests.md).
 | [Feature: Nested skill bundles are grouped in discovery](nested-skill-bundles-are-grouped-in-discovery.md) |
 | [First-launch home card for Plugins and Apps](first-launch-home-card-for-plugins-and-apps.md) |
 | [Composer prompts inside Skills dropdown](composer-prompts-inside-skills-dropdown.md) |
+| [Local skills and compact directory navigation](local-skills-and-directory-navigation.md) |

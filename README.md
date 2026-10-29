@@ -21,7 +21,6 @@
 ```
 
 ---
-<img width="1366" height="900" alt="image" src="https://github.com/user-attachments/assets/1a3578ba-add8-49a2-88b4-08195a7f0140" />
 
 ## 🤯 What Is This?
 **`codexapp`** is a lightweight bridge that gives you a browser-accessible UI for Codex app-server workflows.
@@ -40,17 +39,19 @@ You run one command. It starts a local web server. You open it from your machine
 npx codexapp
 
 # 🌐 Then open in browser
-# http://localhost:18923
+# http://localhost:5900
 ```
 
-By default, `codexapp` now also starts:
+By default, `codexapp` starts without a tunnel. Enable it explicitly with `npx codexapp --tunnel`.
+Use `--no-password` to disable web UI authentication and password file generation:
 
 ```bash
-cloudflared tunnel --url http://localhost:<port>
+npx codexapp --no-password
 ```
 
-It prints the tunnel URL, terminal QR code, and password together in startup output.  
-Use `--no-tunnel` to disable this behavior.
+The default bind address is `0.0.0.0`; with `--no-password`, anyone who can reach the server can use it.
+The sandbox mode is inherited from Codex configuration unless `--sandbox-mode` or `CODEXUI_SANDBOX_MODE` is set.
+Supported modes are `read-only`, `workspace-write`, and `danger-full-access`; the CLI option takes precedence.
 
 If you are using a provider or AI gateway that is already authenticated and do not want `codexapp` to force `codex login` during startup, use:
 
@@ -129,7 +130,7 @@ Notes:
 
 - 🚀 One-command launch with `npx codexapp`
 - 🌍 Cross-platform support for Linux, Windows, and Termux on Android
-- 🖥️ Browser-first Codex UI flow on `http://localhost:18923`
+- 🖥️ Browser-first Codex UI flow on `http://localhost:5900`
 - 🌐 LAN-friendly access from other devices on the same network
 - 🧪 Remote/headless-friendly setup for server-based Codex usage
 - 🔌 Works with reverse proxies and tunneling setups
@@ -208,20 +209,6 @@ Outgoing assistant messages are sent with Telegram `parse_mode=HTML` for formatt
 
 ---
 
-## 🖼️ Screenshots
-
-### Skills Hub
-![Skills Hub](docs/screenshots/skills-hub.png)
-
-### Chat
-![Chat](docs/screenshots/chat.png)
-
-### Mobile UI
-![Skills Hub Mobile](docs/screenshots/skills-hub-mobile.png)
-![Chat Mobile](docs/screenshots/chat-mobile.png)
-
----
-
 ## 🏗️ Architecture
 
 ```text
@@ -275,3 +262,23 @@ Built for speed, portability, and a little bit of chaos 😏
 
 ---
 
+
+## Run a built local checkout
+
+This repository keeps Vue/TypeScript sources. Build them before launching a local package snapshot:
+
+```bash
+pnpm install
+pnpm run build
+npm start -- --no-tunnel --port 5900
+```
+
+Repeat the build after changing sources or pulling updates. `npm start` packs the built checkout into npm's cache and launches a tarball named by its SHA-256 hash. Unchanged package contents reuse the snapshot; changed contents get a new package path, avoiding stale directory-based `npx --package=...` installs. The launcher prints the checkout path and package revision. Stop the previous server and reload the browser after restarting. Dependencies are installed by npm on the first snapshot launch.
+
+Installation no longer runs a native PTY repair hook automatically. If a terminal cannot load its optional native binding, run `npm run repair:pty`.
+
+`pnpm run build` produces minified, content-hashed Vite assets in `dist/` and versions the service worker cache from the complete frontend contents. HTTP entry points require revalidation. Edit `src/`, then rebuild; generated bundles are not source files in this repository.
+
+Reasoning effort choices follow each model's `supportedReasoningEfforts` in server order. Unsupported selections fall back to the model's supported default or its first supported value. Missing capabilities show a disabled “Model default” selector and omit an explicit effort. Capabilities are scoped to the provider, including direct and queued turns.
+
+Type `/` in the composer to choose a skill, `/plan`, or `/goal`. Goal mode prefixes the submitted prompt with `/goal`. Existing thread goals can be edited, paused, or cleared in the goal panel. The server must support `thread/goal/get`, `thread/goal/set`, and `thread/goal/clear`.
