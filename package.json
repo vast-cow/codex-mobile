@@ -35,7 +35,8 @@
     "dist-cli/",
     "scripts/dev.cjs",
     "scripts/dev-random-home.cjs",
-    "scripts/fix-pty-native-build.cjs"
+    "scripts/fix-pty-native-build.cjs",
+    "scripts/run-local.cjs"
   ],
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -49,15 +50,16 @@
     "dev": "node scripts/dev.cjs",
     "dev2": "node scripts/dev-random-home.cjs",
     "dev:open": "pnpm run build:cli && sh -c 'pnpm run dev & VPID=$!; node dist-cli/index.js --open-project \"${1:-.}\"; wait $VPID' --",
-    "build:frontend": "vue-tsc --noEmit && vite build",
+    "build:frontend": "vue-tsc --noEmit && vite build && node scripts/version-assets.mjs",
     "build:cli": "tsup",
     "build": "pnpm run build:frontend && pnpm run build:cli",
-    "postinstall": "node scripts/fix-pty-native-build.cjs",
     "test:unit": "vitest run",
     "preview": "vite preview",
     "prepublishOnly": "pnpm run build",
     "profile:browser": "node scripts/profile-browser-runtime.cjs",
-    "profile:thread": "PROFILE_ROUTE='#/thread/019da7c0-4e12-7a91-837c-f7c11cc8ab6c' node scripts/profile-browser-runtime.cjs"
+    "profile:thread": "PROFILE_ROUTE='#/thread/019da7c0-4e12-7a91-837c-f7c11cc8ab6c' node scripts/profile-browser-runtime.cjs",
+    "start": "node scripts/run-local.cjs",
+    "repair:pty": "node scripts/fix-pty-native-build.cjs"
   },
   "dependencies": {
     "@composio/client": "0.1.0-alpha.66",

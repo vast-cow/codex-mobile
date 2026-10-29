@@ -62,9 +62,9 @@ for (const name of PTY_PACKAGES) {
       stdio: 'inherit',
     })
     if (result.status !== 0) {
-      console.warn(`[postinstall] Failed to repair ${name} native PTY build`)
+      console.warn(`[repair:pty] Failed to repair ${name} native PTY build`)
     }
   } catch (error) {
-    console.warn(`[postinstall] Failed to repair ${name} native PTY build: ${error.message}`)
+    console.warn(`[repair:pty] Failed to repair ${name} native PTY build: ${error.message}`)
   }
 }

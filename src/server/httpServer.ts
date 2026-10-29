@@ -222,7 +222,7 @@ export function createServer(options: ServerOptions = {}): ServerInstance {
 
   // 8. Static files from Vue build
   if (hasFrontendAssets) {
-    app.use(express.static(distDir))
+    app.use(express.static(distDir, { setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') }))
   }
 
   // 9. SPA fallback
@@ -241,7 +241,7 @@ export function createServer(options: ServerOptions = {}): ServerInstance {
       return
     }
 
-    res.sendFile(spaEntryFile, (error) => {
+    res.sendFile(spaEntryFile, { headers: { 'Cache-Control': 'no-cache' } }, (error) => {
       if (!error) return
       if (!res.headersSent) {
         res.status(404).type('text/html; charset=utf-8').send(renderFrontendMissingHtml('Frontend entry file not found.'))

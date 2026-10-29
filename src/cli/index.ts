@@ -561,10 +561,9 @@ async function startServer(options: {
     '',
     'Codex Web Local is running!',
     `  Version:  ${version}`,
-    '  GitHub:   https://github.com/friuns2/codexui',
     '',
     `  Bind:     http://0.0.0.0:${String(port)}`,
-    `  Codex sandbox: ${runtimeConfig.sandboxMode}`,
+    `  Codex sandbox: ${runtimeConfig.sandboxMode ?? "Codex configuration (inherited)"}`,
     `  Approval policy: ${runtimeConfig.approvalPolicy}`,
   ]
   const accessUrls = getAccessibleUrls(port)
@@ -632,7 +631,7 @@ program
   .option('-p, --port <port>', 'port to listen on', '5900')
   .option('--password <pass>', 'set a specific password')
   .option('--no-password', 'disable password protection')
-  .option('--tunnel', 'start cloudflared tunnel (default is auto by Tailscale detection)', true)
+  .option('--tunnel', 'start cloudflared tunnel (disabled by default)', false)
   .option('--no-tunnel', 'disable cloudflared tunnel startup')
   .option('--open', 'open browser on startup', true)
   .option('--no-open', 'do not open browser on startup')
@@ -640,7 +639,7 @@ program
   .option('--no-login', 'skip automatic Codex login bootstrap')
   .option('--memories', 'enable Codex memories for spawned app-server processes', true)
   .option('--no-memories', 'disable Codex memories for spawned app-server processes')
-  .option('--sandbox-mode <mode>', 'Codex sandbox mode: read-only, workspace-write, danger-full-access')
+  .option('--sandbox-mode <mode>', 'Codex sandbox mode: read-only, workspace-write, danger-full-access (default: inherit Codex configuration)')
   .option('--approval-policy <policy>', 'Codex approval policy: untrusted, on-failure, on-request, never')
   .action(async (
     projectPath: string | undefined,
@@ -658,19 +657,12 @@ program
   ) => {
     const rawArgv = process.argv.slice(2)
     const openProjectFlagIndex = rawArgv.findIndex((arg) => arg === '--open-project' || arg.startsWith('--open-project='))
-    const tunnelFlagExplicit = rawArgv.some((arg) => (
-      arg === '--tunnel'
-      || arg === '--no-tunnel'
-      || arg.startsWith('--tunnel=')
-      || arg.startsWith('--no-tunnel=')
-    ))
     const memoriesFlagExplicit = rawArgv.some((arg) => (
       arg === '--memories'
       || arg === '--no-memories'
       || arg.startsWith('--memories=')
       || arg.startsWith('--no-memories=')
     ))
-    const effectiveTunnel = tunnelFlagExplicit ? opts.tunnel : hasDetectedTailscaleIp()
     if (memoriesFlagExplicit) {
       process.env.CODEXUI_MEMORIES = opts.memories ? 'true' : 'false'
     }
@@ -701,7 +693,7 @@ program
       }
       opts.approvalPolicy = parsedApprovalPolicy
     }
-    await startServer({ ...opts, tunnel: effectiveTunnel, projectPath: launchProject })
+    await startServer({ ...opts, projectPath: launchProject })
   })
 
 program.command('login').description('Install/check Codex CLI and run `codex login`').action(runLogin)

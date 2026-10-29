@@ -19,7 +19,6 @@ function run(command, args, options = {}) {
     stdio: 'inherit',
     env: {
       ...process.env,
-      CODEXUI_SANDBOX_MODE: process.env.CODEXUI_SANDBOX_MODE || 'danger-full-access',
       CODEXUI_APPROVAL_POLICY: process.env.CODEXUI_APPROVAL_POLICY || 'never',
     },
     ...options,
