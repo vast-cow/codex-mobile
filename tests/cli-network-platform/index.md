@@ -14,9 +14,9 @@ Return to the [manual test index](../../tests.md).
 | [CLI password output redaction](cli-password-output-redaction.md) |
 | [npx run dev compatibility shim](npx-run-dev-compatibility-shim.md) |
 | [Termux install without native PTY build](termux-install-without-native-pty-build.md) |
-| [Feature: Tailscale CIDRs bypass password and Cloudflare tunnel is opt-in](tailscale-cidrs-bypass-password-and-cloudflare-tunnel-is-opt-in.md) |
+| [Feature: Tailscale requires configured passwords and Cloudflare tunnel is opt-in](tailscale-cidrs-bypass-password-and-cloudflare-tunnel-is-opt-in.md) |
 | [Feature: Cloudflare tunnel is explicitly enabled](tunnel-auto-mode-follows-tailscale-ip-detection.md) |
-| [Feature: Reverse tunnel login is required unless request is trusted local or Tailscale](reverse-tunnel-login-is-required-unless-request-is-trusted-local-or-tailscale.md) |
+| [Feature: Configured passwords are required on local, Tailscale, and reverse tunnel connections](reverse-tunnel-login-is-required-unless-request-is-trusted-local-or-tailscale.md) |
 | [Feature: Cloudflare tunnel QR omits password auto-login path](cloudflare-tunnel-qr-omits-password-auto-login-path.md) |
 | [Feature: Inherit Codex sandbox configuration](default-runtime-uses-workspace-write-sandbox-with-on-request-approvals.md) |
 | [Feature: Windows npx install no longer depends on legacy PTY package](windows-npx-install-no-longer-depends-on-legacy-pty-package.md) |

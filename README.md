@@ -56,6 +56,8 @@ pnpm run build
 node dist-cli/index.js --no-open --no-tunnel
 ```
 
+Password protection is disabled by default (`--no-password`). To require sign-in, add `--password <pass>`; the password is required for every connection, including localhost and Tailscale.
+
 Use the URL printed in the terminal. Install and log in to Codex CLI (`npm install -g @openai/codex`, then `codex login`) if you want Codex features.
 
 ---

@@ -580,7 +580,7 @@ async function startServer(options: {
 
   if (generatedPasswordPath) {
     lines.push(`  Generated password file: ${generatedPasswordPath}`)
-    lines.push('  Use that file to retrieve the password for untrusted origins.')
+    lines.push('  Use that file to retrieve the password for sign-in.')
   }
 
   const tunnelQrUrl = tunnelUrl ? buildTunnelAutologinUrl(tunnelUrl, password) : null
@@ -629,8 +629,8 @@ program
   .argument('[projectPath]', 'project directory to open on launch')
   .option('--open-project <path>', 'open project directory on launch (Codex desktop parity)')
   .option('-p, --port <port>', 'port to listen on', '5900')
-  .option('--password <pass>', 'set a specific password')
-  .option('--no-password', 'disable password protection')
+  .option('--password <pass>', 'enable password protection with a specific password', false)
+  .option('--no-password', 'disable password protection (default)')
   .option('--tunnel', 'start cloudflared tunnel (disabled by default)', false)
   .option('--no-tunnel', 'disable cloudflared tunnel startup')
   .option('--open', 'open browser on startup', true)
