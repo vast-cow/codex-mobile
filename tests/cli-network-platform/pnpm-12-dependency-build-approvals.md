@@ -28,13 +28,9 @@
    node -e 'const assert = require("node:assert/strict"); const pty = require("node-pty"); assert.equal(typeof pty.spawn, "function"); const child = pty.spawn("/bin/sh", ["-c", "printf pnpm12-pty-ok"], { cols: 80, rows: 24 }); let output = ""; const timer = setTimeout(() => { child.kill(); process.exit(1); }, 5000); child.onData(data => output += data); child.onExit(({ exitCode }) => { clearTimeout(timer); assert.equal(exitCode, 0); assert.match(output, /pnpm12-pty-ok/); console.log("node-pty spawn OK"); });'
    ```
 
-5. Inspect `.github/workflows/build-apk.yml`: Node.js 22, pnpm setup reads the
-   `packageManager` pin, and installation uses `--frozen-lockfile`. The frontend
-   and CLI build commands are covered by step 3. Full APK assembly also requires
-   the `android/` project and its scripts; report their absence as a separate
-   blocker rather than a package-manager regression. Review `publish-android.sh`
-   to confirm its npm publishing and optional-PTY removal remain unchanged; do
-   not publish as part of this test.
+5. Review `publish-android.sh` to confirm its npm publishing and optional-PTY
+   removal remain unchanged; do not publish as part of this test. The frontend
+   and CLI build commands are covered by step 3.
 
 ## Approval review
 

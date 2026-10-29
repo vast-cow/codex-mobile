@@ -1,6 +1,6 @@
-# 🔥 codexapp
+# :fire: codexapp
 
-### 🚀 Run Codex App UI Anywhere: Linux, Windows, or Termux on Android 🚀
+### :rocket: Run Codex App UI Anywhere: Linux, Windows, or Termux on Android :rocket:
 
 [![platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Windows%20%7C%20Android-blue?style=for-the-badge)](#-quick-start)
 [![node](https://img.shields.io/badge/Node-18%2B-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
@@ -21,16 +21,16 @@
 
 ---
 
-## 🤯 What Is This?
+## :exploding_head: What Is This?
 **`codexapp`** is a lightweight bridge that gives you a browser-accessible UI for Codex app-server workflows.
 
 You run one command. It starts a local web server. You open it from your machine, your LAN, or wherever your setup allows.  
 
-**TL;DR 🧠: Codex app UI, unlocked for Linux, Windows, and Termux-powered Android setups.**
+**TL;DR :brain:: Codex app UI, unlocked for Linux, Windows, and Termux-powered Android setups.**
 
 ---
 
-## ⚡ Quick Start
+## :zap: Quick Start
 > **The main event.**
 
 ### Run the development branch from source
@@ -60,22 +60,22 @@ Use the URL printed in the terminal. Install and log in to Codex CLI (`npm insta
 
 ---
 
-## ✨ Features
+## :sparkles: Features
 > **The payload.**
 
-- 🚀 One-command launch with `npx codexapp`
-- 🌍 Cross-platform support for Linux, Windows, and Termux on Android
-- 🖥️ Browser-first Codex UI flow on `http://localhost:5900`
-- 🌐 LAN-friendly access from other devices on the same network
-- 🧪 Remote/headless-friendly setup for server-based Codex usage
-- 🔌 Works with reverse proxies and tunneling setups
-- ⚡ No global install required for quick experimentation
-- 🎙️ Built-in hold-to-dictate voice input with transcription to composer draft
-- 🤖 Optional Telegram bot bridge: send messages to bot, forward into mapped thread, send assistant reply back to Telegram
-- 💾 Project portability: export a project as a ZIP from project or thread menus, including matching Codex chat JSONL history under `.codex-project/chats/`
-- 📦 Project import: restore exported project ZIPs from the browser via `Import Project`
-- 🔁 Imported chats are rewritten for the destination `CODEX_HOME`, project path, and currently selected provider/model so they can be resumed in the new environment
-- ⚙️ Project ZIP performance: exports stream ZIP bytes with response backpressure handling and skip generated/git-ignored folders; imports still buffer the selected ZIP once because the browser upload arrives as a single file
+- :rocket: One-command launch with `npx codexapp`
+- :earth_americas: Cross-platform support for Linux, Windows, and Termux on Android
+- :desktop_computer: Browser-first Codex UI flow on `http://localhost:5900`
+- :globe_with_meridians: LAN-friendly access from other devices on the same network
+- :test_tube: Remote/headless-friendly setup for server-based Codex usage
+- :electric_plug: Works with reverse proxies and tunneling setups
+- :zap: No global install required for quick experimentation
+- :studio_microphone: Built-in hold-to-dictate voice input with transcription to composer draft
+- :robot: Optional Telegram bot bridge: send messages to bot, forward into mapped thread, send assistant reply back to Telegram
+- :floppy_disk: Project portability: export a project as a ZIP from project or thread menus, including matching Codex chat JSONL history under `.codex-project/chats/`
+- :package: Project import: restore exported project ZIPs from the browser via `Import Project`
+- :repeat: Imported chats are rewritten for the destination `CODEX_HOME`, project path, and currently selected provider/model so they can be resumed in the new environment
+- :gear: Project ZIP performance: exports stream ZIP bytes with response backpressure handling and skip generated/git-ignored folders; imports still buffer the selected ZIP once because the browser upload arrives as a single file
 
 ### Telegram Bot Bridge (Optional)
 
@@ -112,39 +112,39 @@ Outgoing assistant messages are sent with Telegram `parse_mode=HTML` for formatt
 
 ---
 
-## 🧩 Recent Product Features (from main commits)
+## :jigsaw: Recent Product Features (from main commits)
 > **Not just launch. Actual UX upgrades.**
 
-- 🗂️ Searchable project picker in new-thread flow
-- ➕ "Create Project" button next to "Select folder" with browser prompt
-- 📌 New projects get pinned to top automatically
-- 🧠 Smart default new-project name suggestion via server-side free-directory scan (`New Project (N)`)
-- 🔄 Project order persisted globally to workspace roots state
-- 🧵 Optimistic in-progress threads preserved during refresh/poll cycles
-- 📱 Mobile drawer sidebar in desktop layout (teleported overlay + swipe-friendly structure)
-- 🎛️ Skills Hub mobile-friendly spacing/toolbar layout improvements
-- 🪟 Skill detail modal tuned for mobile sheet-style behavior
-- 🧪 Skills Hub event typing fix for `SkillCard` select emit compatibility
-- 🎙️ Voice dictation flow in composer (`hold to dictate` -> transcribe -> append text)
+- :card_index_dividers: Searchable project picker in new-thread flow
+- :heavy_plus_sign: "Create Project" button next to "Select folder" with browser prompt
+- :pushpin: New projects get pinned to top automatically
+- :brain: Smart default new-project name suggestion via server-side free-directory scan (`New Project (N)`)
+- :arrows_counterclockwise: Project order persisted globally to workspace roots state
+- :thread: Optimistic in-progress threads preserved during refresh/poll cycles
+- :iphone: Mobile drawer sidebar in desktop layout (teleported overlay + swipe-friendly structure)
+- :control_knobs: Skills Hub mobile-friendly spacing/toolbar layout improvements
+- :window: Skill detail modal tuned for mobile sheet-style behavior
+- :test_tube: Skills Hub event typing fix for `SkillCard` select emit compatibility
+- :studio_microphone: Voice dictation flow in composer (`hold to dictate` -> transcribe -> append text)
 
 ---
 
-## 🌍 What Can You Do With This?
+## :earth_americas: What Can You Do With This?
 
-| 🔥 Use Case | 💥 What You Get |
+| :fire: Use Case | :boom: What You Get |
 |---|---|
-| 💻 Linux workstation | Run Codex UI in browser without depending on desktop shell |
-| 🪟 Windows machine | Launch web UI and access from Chrome/Edge quickly |
-| 📱 Termux on Android | Start service in Termux and control from mobile browser |
-| 🧪 Remote dev box | Keep Codex process on server, view UI from client device |
-| 🌐 LAN sharing | Open UI from another device on same network |
-| 🧰 Headless workflows | Keep terminal + browser split for productivity |
-| 🔌 Custom routing | Put behind reverse proxy/tunnel if needed |
-| ⚡ Fast experiments | `npx` run without full global setup |
+| :computer: Linux workstation | Run Codex UI in browser without depending on desktop shell |
+| :window: Windows machine | Launch web UI and access from Chrome/Edge quickly |
+| :iphone: Termux on Android | Start service in Termux and control from mobile browser |
+| :test_tube: Remote dev box | Keep Codex process on server, view UI from client device |
+| :globe_with_meridians: LAN sharing | Open UI from another device on same network |
+| :toolbox: Headless workflows | Keep terminal + browser split for productivity |
+| :electric_plug: Custom routing | Put behind reverse proxy/tunnel if needed |
+| :zap: Fast experiments | `npx` run without full global setup |
 
 ---
 
-## 🏗️ Architecture
+## :building_construction: Architecture
 
 ```text
 ┌─────────────────────────────┐
@@ -163,17 +163,17 @@ Outgoing assistant messages are sent with Telegram `parse_mode=HTML` for formatt
 
 ---
 
-## 🎯 Requirements
-- ✅ Node.js `18+`
-- ✅ Codex app-server environment available
-- ✅ Browser access to host/port
-- ✅ Microphone permission (only for voice dictation)
+## :dart: Requirements
+- :white_check_mark: Node.js `18+`
+- :white_check_mark: Codex app-server environment available
+- :white_check_mark: Browser access to host/port
+- :white_check_mark: Microphone permission (only for voice dictation)
 
 ---
 
-## 🐛 Troubleshooting
+## :bug: Troubleshooting
 
-| ❌ Problem | ✅ Fix |
+| :x: Problem | :white_check_mark: Fix |
 |---|---|
 | Port already in use | Run on a free port or stop old process |
 | `npx` fails | Update npm/node, then retry |
@@ -182,17 +182,17 @@ Outgoing assistant messages are sent with Telegram `parse_mode=HTML` for formatt
 
 ---
 
-## 🤝 Contributing
+## :handshake: Contributing
 Issues and PRs are welcome.  
 Bring bug reports, platform notes, and setup improvements.
 
 ---
 
-## ⭐ Star This Repo
-If you believe Codex UI should be accessible from **any machine, any OS, any screen**, star this project and share it. ⭐
+## :star: Star This Repo
+If you believe Codex UI should be accessible from **any machine, any OS, any screen**, star this project and share it. :star:
 
 <div align="center">
-Built for speed, portability, and a little bit of chaos 😏
+Built for speed, portability, and a little bit of chaos :smirk:
 </div>
 
 ---
