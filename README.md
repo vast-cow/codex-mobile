@@ -2,7 +2,6 @@
 
 ### 🚀 Run Codex App UI Anywhere: Linux, Windows, or Termux on Android 🚀
 
-[![npm](https://img.shields.io/npm/v/codexapp?style=for-the-badge&logo=npm&logoColor=white)](https://www.npmjs.com/package/codexapp)
 [![platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Windows%20%7C%20Android-blue?style=for-the-badge)](#-quick-start)
 [![node](https://img.shields.io/badge/Node-18%2B-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![license](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](./LICENSE)
@@ -58,97 +57,6 @@ node dist-cli/index.js --no-open --no-tunnel
 ```
 
 Use the URL printed in the terminal. Install and log in to Codex CLI (`npm install -g @openai/codex`, then `codex login`) if you want Codex features.
-
-### Run the published npm package
-
-```bash
-# 🔓 Run instantly (recommended)
-npx codexapp
-
-# 🌐 Then open in browser
-# http://localhost:5900
-```
-
-By default, `codexapp` starts without a tunnel. Enable it explicitly with `npx codexapp --tunnel`.
-Use `--no-password` to disable web UI authentication and password file generation:
-
-```bash
-npx codexapp --no-password
-```
-
-The default bind address is `0.0.0.0`; with `--no-password`, anyone who can reach the server can use it.
-The sandbox mode is inherited from Codex configuration unless `--sandbox-mode` or `CODEXUI_SANDBOX_MODE` is set.
-Supported modes are `read-only`, `workspace-write`, and `danger-full-access`; the CLI option takes precedence.
-
-If you are using a provider or AI gateway that is already authenticated and do not want `codexapp` to force `codex login` during startup, use:
-
-```bash
-npx codexapp --no-login
-```
-
-### Linux 🐧
-```bash
-node -v   # should be 18+
-npx codexapp
-```
-
-### Windows 🪟 (PowerShell)
-```powershell
-node -v   # 18+
-npx codexapp
-```
-
-### Termux (Android) 🤖
-```bash
-pkg update && pkg upgrade -y
-pkg install nodejs -y
-npx codexapp
-```
-
-Android background requirements:
-
-1. Keep `codexapp` running in the current Termux session (do not close it).
-2. In Android settings, disable battery optimization for `Termux`.
-3. Keep the persistent Termux notification enabled so Android is less likely to kill it.
-4. Optional but recommended in Termux:
-```bash
-termux-wake-lock
-```
-5. Open the shown URL in your Android browser. If the app is killed, return to Termux and run `npx codexapp` again.
-
----
-
-## iPhone / iPad via Tailscale Serve
-
-If you want to use codexUI from iPhone or iPad Safari, serving it over HTTPS is recommended.
-
-A practical private setup is to run codexUI locally and publish it inside your tailnet with Tailscale Serve:
-
-```powershell
-npx codexapp --no-tunnel --port 5900
-tailscale serve --bg 5900
-```
-
-Then open:
-
-```text
-https://<your-machine>.<your-tailnet>.ts.net
-```
-
-This setup worked well in practice for:
-
-- iPhone Safari access
-- Add to Home Screen
-- the built-in dictation / transcription feature in the app
-- viewing the same projects and conversations from the Windows host
-
-Notes:
-
-- Tailscale Serve keeps access private to your tailnet
-- on iOS, HTTPS / secure context appears to be important for mobile browser access and dictation
-- some minor mobile Safari CSS issues may still exist, but they do not prevent normal use
-- depending on proxying details, authentication behavior may differ from direct remote access
-- if conversations created in the web UI do not immediately appear in the Windows app, restarting the Windows app may refresh them
 
 ---
 
@@ -288,39 +196,3 @@ Built for speed, portability, and a little bit of chaos 😏
 </div>
 
 ---
-
-
-## Run a built local checkout
-
-This repository keeps Vue/TypeScript sources. Build them before launching a local package snapshot:
-
-Use Node.js 22 and pnpm 12.16.1 for source development and CI. The
-`packageManager` field pins pnpm; install it with `npm install -g pnpm@12.16.1`
-if it is not already available. This development toolchain does not change the
-published CLI's Node.js runtime requirement.
-
-```bash
-pnpm install
-pnpm run build
-npm start -- --no-tunnel --port 5900
-```
-
-Commit dependency changes together with `pnpm-lock.yaml`; CI installs with
-`pnpm install --frozen-lockfile`. Dependency lifecycle approvals live in
-`pnpm-workspace.yaml`: `esbuild` sets up its platform binary, and `node-pty`
-selects prebuilt native bindings or compiles them (requiring Python, make, and a
-C++ compiler on Linux when no prebuild is available). `protobufjs` and
-`@firebase/util` are absent from the current dependency graph and have no standing
-build approval. Newly introduced lifecycle scripts must be reviewed and recorded
-in the workspace configuration; fresh installs of the committed graph need no
-manual approval.
-
-Repeat the build after changing sources or pulling updates. `npm start` packs the built checkout into npm's cache and launches a tarball named by its SHA-256 hash. Unchanged package contents reuse the snapshot; changed contents get a new package path, avoiding stale directory-based `npx --package=...` installs. The launcher prints the checkout path and package revision. Stop the previous server and reload the browser after restarting. Dependencies are installed by npm on the first snapshot launch.
-
-Installation no longer runs a native PTY repair hook automatically. If a terminal cannot load its optional native binding, run `npm run repair:pty`.
-
-`pnpm run build` produces minified, content-hashed Vite assets in `dist/` and versions the service worker cache from the complete frontend contents. HTTP entry points require revalidation. Edit `src/`, then rebuild; generated bundles are not source files in this repository.
-
-Reasoning effort choices follow each model's `supportedReasoningEfforts` in server order. Unsupported selections fall back to the model's supported default or its first supported value. Missing capabilities show a disabled “Model default” selector and omit an explicit effort. Capabilities are scoped to the provider, including direct and queued turns.
-
-Type `/` in the composer to choose a skill, `/plan`, or `/goal`. Goal mode prefixes the submitted prompt with `/goal`. Existing thread goals can be edited, paused, or cleared in the goal panel. The server must support `thread/goal/get`, `thread/goal/set`, and `thread/goal/clear`.
