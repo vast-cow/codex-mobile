@@ -34,6 +34,33 @@ You run one command. It starts a local web server. You open it from your machine
 ## ⚡ Quick Start
 > **The main event.**
 
+### Run the development branch from source
+
+To run this repository's development version, clone the `devel` branch and start the Vite development server:
+
+```bash
+git clone -b devel https://github.com/vast-cow/codex-mobile.git
+cd codex-mobile
+corepack enable
+corepack prepare pnpm@latest --activate
+pnpm install
+pnpm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173) on the same computer. To connect from a phone on the same Wi-Fi network, use the computer's LAN IP address with port `5173` (for example, `http://192.168.1.100:5173`). Allow the connection through the computer's firewall if needed.
+
+To run the built app as a Node.js server instead, build the project and start its CLI entry point:
+
+```bash
+pnpm install
+pnpm run build
+node dist-cli/index.js --no-open --no-tunnel
+```
+
+Use the URL printed in the terminal. Install and log in to Codex CLI (`npm install -g @openai/codex`, then `codex login`) if you want Codex features.
+
+### Run the published npm package
+
 ```bash
 # 🔓 Run instantly (recommended)
 npx codexapp
