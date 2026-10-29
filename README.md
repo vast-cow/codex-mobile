@@ -267,11 +267,26 @@ Built for speed, portability, and a little bit of chaos 😏
 
 This repository keeps Vue/TypeScript sources. Build them before launching a local package snapshot:
 
+Use Node.js 22 and pnpm 12.16.1 for source development and CI. The
+`packageManager` field pins pnpm; install it with `npm install -g pnpm@12.16.1`
+if it is not already available. This development toolchain does not change the
+published CLI's Node.js runtime requirement.
+
 ```bash
 pnpm install
 pnpm run build
 npm start -- --no-tunnel --port 5900
 ```
+
+Commit dependency changes together with `pnpm-lock.yaml`; CI installs with
+`pnpm install --frozen-lockfile`. Dependency lifecycle approvals live in
+`pnpm-workspace.yaml`: `esbuild` sets up its platform binary, and `node-pty`
+selects prebuilt native bindings or compiles them (requiring Python, make, and a
+C++ compiler on Linux when no prebuild is available). `protobufjs` and
+`@firebase/util` are absent from the current dependency graph and have no standing
+build approval. Newly introduced lifecycle scripts must be reviewed and recorded
+in the workspace configuration; fresh installs of the committed graph need no
+manual approval.
 
 Repeat the build after changing sources or pulling updates. `npm start` packs the built checkout into npm's cache and launches a tarball named by its SHA-256 hash. Unchanged package contents reuse the snapshot; changed contents get a new package path, avoiding stale directory-based `npx --package=...` installs. The launcher prints the checkout path and package revision. Stop the previous server and reload the browser after restarting. Dependencies are installed by npm on the first snapshot launch.
 

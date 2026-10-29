@@ -1,0 +1,9 @@
+allowBuilds:
+  # Install and validate the platform binary used by Vite and tsup.
+  esbuild: true
+  # Select prebuilt PTY bindings or compile them for the host platform.
+  node-pty: true
+
+# Preserve the existing install/cache policy formerly configured in .npmrc.
+sideEffectsCache: false
+packageImportMethod: copy

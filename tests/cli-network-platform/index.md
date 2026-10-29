@@ -8,6 +8,7 @@ Return to the [manual test index](../../tests.md).
 
 | Section |
 | --- |
+| [pnpm 12 dependency build approvals](pnpm-12-dependency-build-approvals.md) |
 | [Missing Codex CLI chat error](missing-codex-cli-chat-error.md) |
 | [Startup avoids duplicate setup probes](startup-avoids-duplicate-setup-probes.md) |
 | [CLI password output redaction](cli-password-output-redaction.md) |
