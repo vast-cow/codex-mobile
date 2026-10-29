@@ -1,5 +1,6 @@
+import { reasoningCatalog } from './modelCapabilities'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getAvailableModelIds, getThreadDetail, listDirectoryComposioConnectors, resumeThread, startThreadTurn } from './codexGateway'
+import { getAvailableModelIds, getThreadDetail, resumeThread, startThreadTurn } from './codexGateway'
 
 function mockRpcFetch(): { requests: Array<{ method: string, params: Record<string, unknown> }> } {
   const requests: Array<{ method: string, params: Record<string, unknown> }> = []
@@ -30,14 +31,16 @@ function mockRpcFetch(): { requests: Array<{ method: string, params: Record<stri
 
 describe('startThreadTurn collaboration mode payloads', () => {
   afterEach(() => {
+    reasoningCatalog.value = { providerId: '', models: [] }
     vi.unstubAllGlobals()
   })
 
   it('sends default collaboration mode explicitly after a plan turn', async () => {
     const { requests } = mockRpcFetch()
+    reasoningCatalog.value = { providerId: 'codex', models: [{ id: 'gpt-5.4', supportedReasoningEfforts: ['medium'] }] }
 
-    await startThreadTurn('thread-1', 'make a plan', [], 'gpt-5.4', 'medium', undefined, [], 'plan')
-    await startThreadTurn('thread-1', 'implement it', [], 'gpt-5.4', 'medium', undefined, [], 'default')
+    await startThreadTurn('thread-1', 'make a plan', [], 'gpt-5.4', 'medium', undefined, [], 'plan', 'codex')
+    await startThreadTurn('thread-1', 'implement it', [], 'gpt-5.4', 'medium', undefined, [], 'default', 'codex')
 
     expect(requests).toHaveLength(2)
     expect(requests[0].method).toBe('turn/start')
@@ -61,39 +64,13 @@ describe('startThreadTurn collaboration mode payloads', () => {
   })
 })
 
-describe('listDirectoryComposioConnectors', () => {
-  afterEach(() => {
-    vi.unstubAllGlobals()
-  })
-
-  it('sends search queries as query params expected by the server', async () => {
-    const requests: string[] = []
-    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
-      requests.push(String(input))
-      return new Response(JSON.stringify({
-        data: [],
-        nextCursor: null,
-        total: 0,
-      }), {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
-    }))
-
-    await listDirectoryComposioConnectors('instagram', '50', 25)
-
-    expect(requests).toEqual(['/codex-api/composio/connectors?query=instagram&cursor=50&limit=25'])
-  })
-})
-
 describe('getAvailableModelIds', () => {
   afterEach(() => {
+    reasoningCatalog.value = { providerId: '', models: [] }
     vi.unstubAllGlobals()
   })
 
-  it('uses provider models without waiting for model/list when provider models are required', async () => {
+  it('retains provider IDs when capability discovery fails', async () => {
     const requests: string[] = []
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       requests.push(String(input))
@@ -113,7 +90,7 @@ describe('getAvailableModelIds', () => {
       includeProviderModels: true,
       requireProviderModels: true,
     })).resolves.toEqual(['big-pickle', 'deepseek-v4-flash-free'])
-    expect(requests).toEqual(['/codex-api/provider-models'])
+    expect(requests).toEqual(['/codex-api/provider-models', '/codex-api/rpc'])
   })
 
   it('requests models for an explicit thread provider', async () => {
@@ -137,7 +114,7 @@ describe('getAvailableModelIds', () => {
       requireProviderModels: true,
       providerId: 'opencode-zen',
     })).resolves.toEqual(['big-pickle', 'ring-2.6-1t-free'])
-    expect(requests).toEqual(['/codex-api/provider-models?provider=opencode-zen'])
+    expect(requests).toEqual(['/codex-api/provider-models?provider=opencode-zen', '/codex-api/rpc'])
   })
 
   it('falls back to model/list when provider models are optional and unavailable', async () => {
@@ -177,6 +154,7 @@ describe('getAvailableModelIds', () => {
 
 describe('getThreadDetail', () => {
   afterEach(() => {
+    reasoningCatalog.value = { providerId: '', models: [] }
     vi.unstubAllGlobals()
   })
 
@@ -209,6 +187,7 @@ describe('getThreadDetail', () => {
 describe('resumeThread', () => {
   afterEach(() => {
     vi.useRealTimers()
+    reasoningCatalog.value = { providerId: '', models: [] }
     vi.unstubAllGlobals()
   })
 
@@ -259,5 +238,35 @@ describe('resumeThread', () => {
       { method: 'thread/resume', params: { threadId: 'stalled-thread' } },
       { method: 'thread/resume', params: { threadId: 'stalled-thread' } },
     ])
+  })
+})
+
+
+describe('resumeThread compatibility fallback', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('recovers a missing custom endpoint and then reads an active writer', async () => {
+    const requests: Array<{ method: string; params: Record<string, unknown> }> = []
+    vi.stubGlobal('fetch', vi.fn(async (_url, init) => {
+      const body = JSON.parse(init.body)
+      requests.push(body)
+      if (requests.length < 3) return new Response(JSON.stringify({ error: {
+        message: requests.length === 1 ? "model provider `custom_endpoint` not found" : 'thread fallback-thread already has an active writer',
+      } }), { status: 500 })
+      return new Response(JSON.stringify({ result: { thread: { id: 'fallback-thread', modelProvider: 'openai', turns: [] } } }))
+    }))
+    expect(await resumeThread('fallback-thread')).toMatchObject({ modelProvider: 'openai', messages: [] })
+    expect(requests).toEqual([
+      { method: 'thread/resume', params: { threadId: 'fallback-thread' } },
+      { method: 'thread/resume', params: { threadId: 'fallback-thread', modelProvider: 'openai' } },
+      { method: 'thread/read', params: { threadId: 'fallback-thread', includeTurns: true } },
+    ])
+  })
+
+  it('does not retry an unrelated resume error', async () => {
+    const fetch = vi.fn(async () => new Response(JSON.stringify({ error: { message: 'authentication expired' } }), { status: 401 }))
+    vi.stubGlobal('fetch', fetch)
+    await expect(resumeThread('unrelated-failure-thread')).rejects.toThrow('authentication expired')
+    expect(fetch).toHaveBeenCalledTimes(1)
   })
 })

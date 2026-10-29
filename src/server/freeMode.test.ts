@@ -137,13 +137,13 @@ describe('unauthenticated free mode defaults', () => {
 
   it('keeps unauthenticated OpenCode Zen model lists limited to free models', () => {
     expect(filterOpenCodeZenModelsForAuthState([
-      'big-pickle',
+      OPENCODE_ZEN_DEFAULT_MODEL,
       'deepseek-v4-flash-free',
       'GPT-5.5',
       'claude-opus-4-7',
       'nemotron-3-super-free',
     ], null)).toEqual([
-      'big-pickle',
+      OPENCODE_ZEN_DEFAULT_MODEL,
       'deepseek-v4-flash-free',
       'nemotron-3-super-free',
     ])

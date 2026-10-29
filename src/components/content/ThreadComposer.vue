@@ -123,6 +123,15 @@
           </template>
           <div v-else class="thread-composer-file-mention-empty">{{ t('No matching files') }}</div>
         </div>
+        <div v-if="slashStart !== null" class="thread-composer-file-mentions thread-composer-slash-mentions" role="listbox" aria-label="Skills and commands">
+          <button v-for="(item, index) in slashItems" :key="item.kind === 'command' ? item.name : item.skill.path"
+            class="thread-composer-file-mention" :class="{ 'is-active': slashIndex === index }" type="button"
+            role="option" :aria-selected="slashIndex === index" @mousedown.prevent="applySlashSuggestion(item)">
+            <strong>{{ item.kind === 'command' ? `/${item.name}` : item.skill.displayName || item.skill.name }}</strong>
+            <span>{{ item.kind === 'command' ? item.description : item.skill.description }}</span>
+          </button>
+          <p v-if="!slashItems.length">No skills or commands found.</p>
+        </div>
         <textarea
           ref="inputRef"
           v-model="draft"
@@ -290,12 +299,18 @@
             class="thread-composer-control"
             :model-value="selectedReasoningEffort"
             :options="reasoningOptions"
-            :placeholder="t('Thinking')"
+            :placeholder="t(reasoningOptions.length ? 'Thinking' : 'Model default')"
             open-direction="up"
-            :disabled="isComposerConfigDisabled"
+            :disabled="isComposerConfigDisabled || reasoningOptions.length === 0"
             @update:model-value="onReasoningEffortSelect"
           />
         </template>
+
+        <button v-if="threadGoal || goalIntent" type="button" class="thread-composer-goal-toggle"
+          :aria-pressed="goalIntent" :title="threadGoal ? 'Edit goal' : 'Cancel goal mode'"
+          @click="threadGoal ? emit('edit-goal') : (goalIntent = false)">Goal</button>
+        <button v-if="isPlanModeSelected" type="button" class="thread-composer-goal-toggle"
+          aria-label="Disable plan mode" title="Disable plan mode" @click="toggleCollaborationMode">Plan</button>
 
         <div
           class="thread-composer-actions"
@@ -390,6 +405,9 @@
 </template>
 
 <script setup lang="ts">
+import { slashSuggestions, type SlashSuggestion } from '../../utils/slashCommands'
+import type { ThreadGoal } from '../../api/threadGoals'
+
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type {
   CollaborationModeKind,
@@ -439,6 +457,8 @@ const props = defineProps<{
   selectedCollaborationMode: CollaborationModeKind
   models: string[]
   selectedModel: string
+  threadGoal?: ThreadGoal | null
+  reasoningEffortOptions?: Array<{ value: ReasoningEffort; label: string; description?: string }>
   selectedReasoningEffort: ReasoningEffort | ''
   selectedSpeedMode: SpeedMode
   skills?: SkillItem[]
@@ -487,6 +507,7 @@ const emit = defineEmits<{
   'update:selected-model': [modelId: string]
   'update:selected-reasoning-effort': [effort: ReasoningEffort | '']
   'update:selected-speed-mode': [mode: SpeedMode]
+  'edit-goal': []
 }>()
 const { t } = useUiLanguage()
 
@@ -516,6 +537,11 @@ const PASTED_TEXT_FILE_THRESHOLD = 2000
 const PROMPT_OPTION_PREFIX = 'prompt:'
 
 const draft = ref('')
+const goalIntent = ref(false)
+const slashStart = ref<number | null>(null)
+const slashQuery = ref('')
+const slashIndex = ref(0)
+const slashItems = computed(() => slashSuggestions(props.skills ?? [], slashQuery.value))
 const selectedImages = ref<SelectedImage[]>([])
 const selectedSkills = ref<SkillItem[]>([])
 const savedPrompts = ref<ComposerPromptInfo[]>([])
@@ -585,14 +611,7 @@ const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.
 const DRAFT_STORAGE_PREFIX = 'codex-web-local.thread-draft.v1.'
 let lastActiveThreadId = ''
 
-const reasoningOptions: Array<{ value: ReasoningEffort; label: string }> = [
-  { value: 'none', label: 'None' },
-  { value: 'minimal', label: 'Minimal' },
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'xhigh', label: 'Extra high' },
-]
+const reasoningOptions = computed(() => props.reasoningEffortOptions ?? [])
 function formatModelLabel(modelId: string): string {
   return modelId.trim().replace(/^gpt/i, 'GPT')
 }
@@ -719,7 +738,7 @@ const placeholderText = computed(() =>
     ? t('Select a thread to send a message')
     : isPlanModeWaitingForModel.value
       ? t('Loading models for plan mode...')
-      : t('Type a message... (@ for files)'),
+      : t('Type a message... (@ for files, / for skills and commands)'),
 )
 const hasSubmitContent = computed(() =>
   draft.value.trim().length > 0 || selectedImages.value.length > 0 || fileAttachments.value.length > 0,
@@ -956,7 +975,7 @@ function onSubmit(mode: 'steer' | 'queue' = 'steer'): void {
   const text = draft.value.trim()
   if (!canSubmit.value) return
   emit('submit', {
-    text,
+    text: goalIntent.value && text ? `/goal ${text}` : text,
     imageUrls: selectedImages.value.map((image) => image.url),
     fileAttachments: [...fileAttachments.value],
     skills: selectedSkills.value.map((s) => ({ name: s.name, path: s.path })),
@@ -980,6 +999,8 @@ function setActiveInProgressMode(mode: 'steer' | 'queue'): void {
 }
 
 function replaceDraftState(payload: ComposerDraftPayload): void {
+  goalIntent.value = false
+  slashStart.value = null
   draftGeneration.value += 1
   draft.value = payload.text
   selectedImages.value = payload.imageUrls.map((url, index) => ({
@@ -1128,6 +1149,7 @@ function onModelSelect(value: string): void {
 }
 
 function toggleCollaborationMode(): void {
+  goalIntent.value = false
   emit('update:selected-collaboration-mode', isPlanModeSelected.value ? 'default' : 'plan')
 }
 
@@ -1549,9 +1571,27 @@ function onInputChange(): void {
   }
   queueComposerOverflowMeasurement()
   updateFileMentionState()
+  updateSlashState()
 }
 
 function onInputKeydown(event: KeyboardEvent): void {
+  if (event.isComposing) return
+  if (slashStart.value !== null) {
+    if (event.key === 'Escape') { event.preventDefault(); slashStart.value = null; return }
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault()
+      const count = slashItems.value.length
+      if (count) slashIndex.value = (slashIndex.value + (event.key === 'ArrowDown' ? 1 : count - 1)) % count
+      return
+    }
+    if (event.key === 'Enter' || event.key === 'Tab') {
+      event.preventDefault()
+      const item = slashItems.value[slashIndex.value]
+      if (item) applySlashSuggestion(item)
+      else slashStart.value = null
+      return
+    }
+  }
   if (isFileMentionOpen.value) {
     if (event.key === 'Escape') {
       event.preventDefault()
@@ -1594,6 +1634,33 @@ function onInputKeydown(event: KeyboardEvent): void {
     onSubmit(props.isTurnInProgress ? activeInProgressMode.value : 'steer')
     return
   }
+}
+
+function updateSlashState(): void {
+  const cursor = inputRef.value?.selectionStart ?? draft.value.length
+  const match = draft.value.slice(0, cursor).match(/(^|\s)(\/[^\s/]*)$/u)
+  slashStart.value = match ? cursor - match[2].length : null
+  slashQuery.value = match?.[2].slice(1) ?? ''
+  slashIndex.value = 0
+}
+
+function applySlashSuggestion(item: SlashSuggestion): void {
+  const start = slashStart.value
+  if (start === null) return
+  const cursor = inputRef.value?.selectionStart ?? draft.value.length
+  draft.value = `${draft.value.slice(0, start)}${draft.value.slice(cursor)}`.trimEnd()
+  slashStart.value = null
+  if (item.kind === 'skill') {
+    if (!selectedSkills.value.some((skill) => skill.path === item.skill.path)) selectedSkills.value.push(item.skill)
+  } else if (item.name === 'plan') {
+    toggleCollaborationMode()
+  } else if (props.threadGoal) {
+    emit('edit-goal')
+  } else {
+    goalIntent.value = true
+    emit('update:selected-collaboration-mode', 'default')
+  }
+  nextTick(() => inputRef.value?.focus())
 }
 
 function closeFileMention(): void {

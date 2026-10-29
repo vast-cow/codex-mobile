@@ -1516,6 +1516,16 @@
   @apply border-rose-900 bg-rose-950/60 text-rose-200;
 }
 
+:root.dark .new-thread-open-folder-item-main,
+:root.dark .new-thread-open-folder-item-open {
+  @apply border-zinc-700 bg-zinc-900 text-zinc-100 hover:border-zinc-600 hover:bg-zinc-800;
+}
+
+:root.dark .new-thread-open-folder-toggle,
+:root.dark .new-thread-open-folder-status {
+  @apply text-zinc-400;
+}
+
 :root.dark .runtime-toggle {
   @apply border-zinc-700 bg-zinc-900;
 }
@@ -1887,3 +1897,25 @@
     font-size: 16px !important;
   }
 }
+
+/* Compact navigation and imported goal controls share the page theme. */
+.sidebar-search-toggle.is-active { background: #f4f4f5; color: #3f3f46; }
+:root.dark .sidebar-search-toggle.is-active { background: #27272a; color: #d4d4d8; }
+.thread-goal-card, .thread-goal-editor { margin: 8px 0; padding: 12px; border: 1px solid #cbd5e1; border-radius: 12px; background: #f8fafc; color: #334155; }
+.thread-goal-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.thread-goal-card p { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.thread-goal-card strong { font-size: 12px; }
+.thread-goal-editor textarea { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; color: inherit; }
+.thread-goal-editor-status, .thread-goal-editor-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.thread-goal-editor-actions { justify-content: flex-end; }
+.thread-goal-card button, .thread-goal-editor button, .thread-composer-goal-toggle { padding: 5px 9px; border-radius: 6px; background: #e2e8f0; color: #334155; font-size: 12px; }
+.thread-goal-editor button.is-active, .thread-composer-goal-toggle[aria-pressed='true'] { background: #dbeafe; color: #1d4ed8; }
+.thread-goal-editor button:disabled { opacity: .5; }
+.thread-goal-editor [role='alert'] { color: #dc2626; }
+.thread-composer-slash-mentions button { display: flex; flex-direction: column; align-items: flex-start; width: 100%; padding: 8px 10px; text-align: left; }
+.thread-composer-slash-mentions button span { font-size: 12px; opacity: .7; }
+.thread-composer-slash-mentions button.is-active { background: #e2e8f0; }
+:root.dark .thread-goal-card, :root.dark .thread-goal-editor { background: #172033; border-color: #334155; color: #e2e8f0; }
+:root.dark .thread-goal-editor textarea { background: #0f172a; border-color: #475569; }
+:root.dark .thread-goal-card button, :root.dark .thread-goal-editor button, :root.dark .thread-composer-goal-toggle, :root.dark .thread-composer-slash-mentions button.is-active { background: #334155; color: #e2e8f0; }
+:root.dark .thread-goal-editor button.is-active, :root.dark .thread-composer-goal-toggle[aria-pressed='true'] { background: #1e3a5f; color: #93c5fd; }

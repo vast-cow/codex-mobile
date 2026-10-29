@@ -1,3 +1,6 @@
+import type { ReasoningEffort } from '../types/codex'
+import { findReasoningModel } from './modelCapabilities'
+import { normalizeProviderId, readModelCapabilities, resolveReasoningEffort, type ModelCapabilities } from '../utils/modelReasoning'
 import {
   fetchRpcMethodCatalog,
   fetchRpcNotificationCatalog,
@@ -11,8 +14,6 @@ import type {
   CollaborationModeListResponse,
   ConfigReadResponse,
   GetAccountRateLimitsResponse,
-  ModelListResponse,
-  ReasoningEffort,
   ThreadForkResponse,
   ThreadListResponse,
   ThreadReadResponse,
@@ -158,93 +159,11 @@ export type DirectoryMcpLoginResult = {
   authorizationUrl: string
 }
 
-export type DirectoryComposioStatus = {
-  available: boolean
-  authenticated: boolean
-  cliVersion: string
-  email: string
-  defaultOrgName: string
-  defaultOrgId: string
-  webUrl: string
-  baseUrl: string
-  testUserId: string
-}
-
-export type DirectoryComposioConnection = {
-  id: string
-  wordId: string
-  alias: string
-  status: string
-  authScheme: string
-  createdAt: string
-  updatedAt: string
-  isComposioManaged: boolean
-  isDisabled: boolean
-}
-
-export type DirectoryComposioConnector = {
-  slug: string
-  name: string
-  description: string
-  logoUrl: string
-  latestVersion: string
-  toolsCount: number
-  triggersCount: number
-  isNoAuth: boolean
-  enabled: boolean
-  authModes: string[]
-  activeCount: number
-  totalConnections: number
-  connectionStatuses: string[]
-}
-
-export type DirectoryComposioTool = {
-  slug: string
-  name: string
-  description: string
-}
-
-export type DirectoryComposioConnectorDetail = {
-  connector: DirectoryComposioConnector
-  connections: DirectoryComposioConnection[]
-  tools: DirectoryComposioTool[]
-  dashboardUrl: string
-}
-
-export type DirectoryComposioLinkResult = {
-  status: string
-  message: string
-  connectedAccountId: string
-  redirectUrl: string
-  toolkit: string
-  projectType: string
-}
-
-export type DirectoryComposioLoginResult = {
-  status: string
-  message: string
-  loginUrl: string
-  cliKey: string
-  expiresAt: string
-}
-
 export type ComposerPromptInfo = {
   name: string
   path: string
   content: string
   description: string
-}
-
-export type DirectoryComposioInstallResult = {
-  ok: boolean
-  command: string
-  output: string
-}
-
-type DirectoryComposioConnectorPage = {
-  data: DirectoryComposioConnector[]
-  nextCursor: string | null
-  total: number
 }
 
 type ProviderModelsResponse = {
@@ -253,19 +172,6 @@ type ProviderModelsResponse = {
 }
 
 const PROVIDER_MODELS_FETCH_TIMEOUT_MS = 5_000
-
-type ResolvedCollaborationModeSettings = {
-  model: string
-  reasoningEffort: ReasoningEffort | null
-}
-
-function normalizePlanModeReasoningEffort(value: ReasoningEffort | '' | null | undefined): ReasoningEffort | null {
-  return value && value.length > 0 ? value : null
-}
-
-function normalizeCollaborationModeReasoningEffort(value: ReasoningEffort | '' | null | undefined): ReasoningEffort | null {
-  return value && value.length > 0 ? value : null
-}
 
 export type WorkspaceRootsState = {
   order: string[]
@@ -347,8 +253,6 @@ export type GitRepositoryStatus = {
   isGitRepo: boolean
   gitRoot: string
 }
-
-
 
 export type ThreadSearchResult = {
   threadIds: string[]
@@ -700,10 +604,7 @@ async function enrichThreadMessagesWithFallback(threadId: string, messages: UiMe
 }
 
 function normalizeReasoningEffort(value: unknown): ReasoningEffort | '' {
-  const allowed: ReasoningEffort[] = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh']
-  return typeof value === 'string' && allowed.includes(value as ReasoningEffort)
-    ? (value as ReasoningEffort)
-    : ''
+  return typeof value === 'string' ? value.trim() : ''
 }
 
 function normalizeSpeedMode(value: unknown): SpeedMode {
@@ -1515,7 +1416,23 @@ export async function resumeThread(threadId: string): Promise<ResumedThread> {
   if (existing) return existing
 
   const promise = (async () => {
-    const payload = await callRpc<ThreadResumeResponse>('thread/resume', { threadId })
+    let payload: ThreadResumeResponse | ThreadReadResponse
+    const activeWriter = (error: unknown) => error instanceof Error && /thread .+ already has an active writer/iu.test(error.message)
+    try {
+      payload = await callRpc<ThreadResumeResponse>('thread/resume', { threadId })
+    } catch (error) {
+      if (activeWriter(error)) {
+        payload = await callRpc<ThreadReadResponse>('thread/read', { threadId, includeTurns: true })
+      } else {
+        if (!(error instanceof Error) || !/model provider [`']custom_endpoint[`'] not found/iu.test(error.message)) throw error
+        try {
+          payload = await callRpc<ThreadResumeResponse>('thread/resume', { threadId, modelProvider: 'openai' })
+        } catch (retryError) {
+          if (!activeWriter(retryError)) throw retryError
+          payload = await callRpc<ThreadReadResponse>('thread/read', { threadId, includeTurns: true })
+        }
+      }
+    }
     const startTurnIndex = readThreadTurnStartIndex(payload)
     const messages = normalizeThreadMessagesV2(payload, startTurnIndex)
     return {
@@ -1781,55 +1698,16 @@ function fileNameFromPath(pathValue: string): string {
   return segments.at(-1) ?? normalized
 }
 
-async function resolveCollaborationModeSettings(
-  mode: CollaborationModeKind,
-  model?: string,
-  effort?: ReasoningEffort,
-): Promise<ResolvedCollaborationModeSettings> {
-  const explicitModel = model?.trim() ?? ''
-  if (explicitModel) {
-    return {
-      model: explicitModel,
-      reasoningEffort: mode === 'plan'
-        ? normalizePlanModeReasoningEffort(effort)
-        : normalizeCollaborationModeReasoningEffort(effort),
-    }
-  }
-
-  let currentConfig: CurrentModelConfig | null = null
+async function resolveCollaborationModel(mode: CollaborationModeKind, model?: string): Promise<string> {
+  if (model?.trim()) return model.trim()
   try {
-    currentConfig = await getCurrentModelConfig()
-  } catch {
-    currentConfig = null
-  }
-
-  const configuredModel = currentConfig?.model.trim() ?? ''
-  if (configuredModel) {
-    return {
-      model: configuredModel,
-      reasoningEffort: mode === 'plan'
-        ? normalizePlanModeReasoningEffort(effort ?? currentConfig?.reasoningEffort)
-        : normalizeCollaborationModeReasoningEffort(effort ?? currentConfig?.reasoningEffort),
-    }
-  }
-
-  let availableModelIds: string[] = []
+    const config = await getCurrentModelConfig()
+    if (config.model.trim()) return config.model.trim()
+  } catch {}
   try {
-    availableModelIds = await getAvailableModelIds()
-  } catch {
-    availableModelIds = []
-  }
-
-  const fallbackModel = availableModelIds.find((candidate) => candidate.trim().length > 0)?.trim() ?? ''
-  if (fallbackModel) {
-    return {
-      model: fallbackModel,
-      reasoningEffort: mode === 'plan'
-        ? normalizePlanModeReasoningEffort(effort ?? currentConfig?.reasoningEffort)
-        : normalizeCollaborationModeReasoningEffort(effort ?? currentConfig?.reasoningEffort),
-    }
-  }
-
+    const ids = await getAvailableModelIds()
+    if (ids.length) return ids[0]
+  } catch {}
   throw new Error(`${mode === 'plan' ? 'Plan' : 'Default'} mode requires an available model. Wait for models to load and try again.`)
 }
 
@@ -1842,6 +1720,7 @@ export async function startThreadTurn(
   skills?: Array<{ name: string; path: string }>,
   fileAttachments: FileAttachmentParam[] = [],
   collaborationMode?: CollaborationModeKind,
+  providerId?: string,
 ): Promise<string> {
   try {
     const normalizedModel = model?.trim() ?? ''
@@ -1888,21 +1767,14 @@ export async function startThreadTurn(
       input,
     }
     if (attachments.length > 0) params.attachments = attachments
-    if (normalizedModel) {
-      params.model = normalizedModel
-    }
-    if (typeof effort === 'string' && effort.length > 0) {
-      params.effort = effort
-    }
+    const resolvedModel = collaborationMode ? await resolveCollaborationModel(collaborationMode, normalizedModel) : normalizedModel
+    const resolvedEffort = resolveReasoningEffort(findReasoningModel(resolvedModel, providerId), effort)
+    if (resolvedModel) params.model = resolvedModel
+    if (resolvedEffort) params.effort = resolvedEffort
     if (collaborationMode) {
-      const collaborationModeSettings = await resolveCollaborationModeSettings(collaborationMode, normalizedModel, effort)
       params.collaborationMode = {
         mode: collaborationMode,
-        settings: {
-          model: collaborationModeSettings.model,
-          reasoning_effort: collaborationModeSettings.reasoningEffort,
-          developer_instructions: null,
-        },
+        settings: { model: resolvedModel, reasoning_effort: resolvedEffort || null, developer_instructions: null },
       }
     }
     const payload = await callRpc<{ turn?: Turn }>('turn/start', params)
@@ -2036,28 +1908,30 @@ async function fetchProviderModelIds(providerId?: string): Promise<{ ids: string
   return null
 }
 
-export async function getAvailableModelIds(options: { includeProviderModels?: boolean; requireProviderModels?: boolean; providerId?: string } = {}): Promise<string[]> {
-  const shouldIncludeProviderModels = options.includeProviderModels !== false
-  const providerModels = shouldIncludeProviderModels ? await fetchProviderModelIds(options.providerId) : null
+type ModelCatalogOptions = { includeProviderModels?: boolean; requireProviderModels?: boolean; providerId?: string; configuredProviderId?: string }
 
-  if (providerModels?.exclusive || options.requireProviderModels) {
-    return providerModels?.ids ?? []
+export async function getAvailableModelCatalog(options: ModelCatalogOptions = {}): Promise<{ ids: string[]; models: ModelCapabilities[] }> {
+  const includeProviders = options.includeProviderModels !== false
+  const isCodexProvider = options.providerId !== undefined && normalizeProviderId(options.providerId) === 'codex'
+  const provider = includeProviders && !isCodexProvider ? await fetchProviderModelIds(options.providerId) : null
+  const exclusive = provider?.exclusive || options.requireProviderModels
+  let models: ModelCapabilities[] = []
+  const providerMatches = options.configuredProviderId === undefined
+    || normalizeProviderId(options.providerId ?? options.configuredProviderId) === normalizeProviderId(options.configuredProviderId)
+  if (providerMatches) {
+    try {
+      models = await readModelCapabilities((params) => callRpc('model/list', params))
+    } catch {
+      // Missing capabilities leave effort selection to the server.
+    }
   }
+  const ids = exclusive ? [...provider?.ids ?? []] : [...new Set(models.map((model) => model.id?.trim() || model.model?.trim() || '').filter(Boolean))]
+  if (!exclusive && provider) for (const id of provider.ids) if (!ids.includes(id)) ids.push(id)
+  return { ids, models }
+}
 
-  const payload = await callRpc<ModelListResponse>('model/list', {})
-  const ids: string[] = []
-  for (const row of payload.data) {
-    const candidate = row.id || row.model
-    if (!candidate || ids.includes(candidate)) continue
-    ids.push(candidate)
-  }
-
-  if (!shouldIncludeProviderModels || !providerModels) return ids
-
-  for (const candidate of providerModels.ids) {
-    if (!ids.includes(candidate)) ids.push(candidate)
-  }
-  return ids
+export async function getAvailableModelIds(options: ModelCatalogOptions = {}): Promise<string[]> {
+  return (await getAvailableModelCatalog(options)).ids
 }
 
 export async function getCurrentModelConfig(): Promise<CurrentModelConfig> {
@@ -2355,76 +2229,6 @@ export async function startDirectoryMcpLogin(name: string): Promise<DirectoryMcp
   return {
     authorizationUrl: readString(payload.authorizationUrl ?? payload.authorization_url) ?? '',
   }
-}
-
-export async function getDirectoryComposioStatus(): Promise<DirectoryComposioStatus> {
-  const response = await fetch('/codex-api/composio/status')
-  if (!response.ok) {
-    throw new Error(`Failed to load Composio status (${response.status})`)
-  }
-  return await response.json() as DirectoryComposioStatus
-}
-
-export async function listDirectoryComposioConnectors(
-  query = '',
-  cursor: string | null = null,
-  limit = 50,
-): Promise<DirectoryComposioConnectorPage> {
-  const params = new URLSearchParams()
-  if (query.trim()) params.set('query', query.trim())
-  if (cursor) params.set('cursor', cursor)
-  if (limit && Number.isFinite(limit)) params.set('limit', String(Math.max(1, Math.floor(limit))))
-  const suffix = params.toString()
-  const response = await fetch(`/codex-api/composio/connectors${suffix ? `?${suffix}` : ''}`)
-  if (!response.ok) {
-    throw new Error(`Failed to list Composio connectors (${response.status})`)
-  }
-  const payload = await response.json() as DirectoryComposioConnectorPage | { data?: DirectoryComposioConnector[]; nextCursor?: string | null; total?: number }
-  return {
-    data: Array.isArray(payload.data) ? payload.data : [],
-    nextCursor: typeof payload.nextCursor === 'string' && payload.nextCursor.length > 0 ? payload.nextCursor : null,
-    total: typeof payload.total === 'number' && Number.isFinite(payload.total) ? Math.max(0, Math.floor(payload.total)) : 0,
-  }
-}
-
-export async function readDirectoryComposioConnector(slug: string): Promise<DirectoryComposioConnectorDetail> {
-  const response = await fetch(`/codex-api/composio/connector?slug=${encodeURIComponent(slug)}`)
-  if (!response.ok) {
-    throw new Error(`Failed to load Composio connector (${response.status})`)
-  }
-  return await response.json() as DirectoryComposioConnectorDetail
-}
-
-export async function startDirectoryComposioLogin(slug: string): Promise<DirectoryComposioLinkResult> {
-  const response = await fetch('/codex-api/composio/link', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ slug }),
-  })
-  if (!response.ok) {
-    throw new Error(`Failed to start Composio login (${response.status})`)
-  }
-  return await response.json() as DirectoryComposioLinkResult
-}
-
-export async function startDirectoryComposioCliLogin(): Promise<DirectoryComposioLoginResult> {
-  const response = await fetch('/codex-api/composio/login', {
-    method: 'POST',
-  })
-  if (!response.ok) {
-    throw new Error(`Failed to start Composio CLI login (${response.status})`)
-  }
-  return await response.json() as DirectoryComposioLoginResult
-}
-
-export async function installDirectoryComposioCli(): Promise<DirectoryComposioInstallResult> {
-  const response = await fetch('/codex-api/composio/install', {
-    method: 'POST',
-  })
-  if (!response.ok) {
-    throw new Error(`Failed to install Composio CLI (${response.status})`)
-  }
-  return await response.json() as DirectoryComposioInstallResult
 }
 
 export async function getAccountRateLimitsResponse(): Promise<GetAccountRateLimitsResponse> {
@@ -3415,7 +3219,6 @@ function getErrorMessageFromPayload(payload: unknown, fallback: string): string 
 
 export type ThreadTitleCache = { titles: Record<string, string>; order: string[] }
 export type ThreadPinnedState = { threadIds: string[] }
-export type FirstLaunchPluginsCardPreference = { dismissed: boolean }
 
 export async function getThreadTitleCache(): Promise<ThreadTitleCache> {
   try {
@@ -3457,29 +3260,6 @@ export async function persistPinnedThreadIds(threadIds: string[]): Promise<void>
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ threadIds }),
-    })
-  } catch {
-    // Best-effort persist
-  }
-}
-
-export async function getFirstLaunchPluginsCardPreference(): Promise<FirstLaunchPluginsCardPreference> {
-  try {
-    const response = await fetch('/codex-api/preferences/first-launch-plugins-card')
-    if (!response.ok) return { dismissed: false }
-    const envelope = (await response.json()) as { data?: FirstLaunchPluginsCardPreference }
-    return { dismissed: envelope.data?.dismissed === true }
-  } catch {
-    return { dismissed: false }
-  }
-}
-
-export async function persistFirstLaunchPluginsCardPreference(dismissed: boolean): Promise<void> {
-  try {
-    await fetch('/codex-api/preferences/first-launch-plugins-card', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dismissed }),
     })
   } catch {
     // Best-effort persist

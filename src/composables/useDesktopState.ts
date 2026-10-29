@@ -1,4 +1,6 @@
-import { computed, ref } from 'vue'
+import { reasoningCatalog, findReasoningModel } from '../api/modelCapabilities'
+import { reasoningOptions, resolveReasoningEffort } from '../utils/modelReasoning'
+import { computed, watch, ref } from 'vue'
 import {
 
   archiveThread,
@@ -6,7 +8,7 @@ import {
   getAvailableCollaborationModes,
   getAccountRateLimits,
   renameThread,
-  getAvailableModelIds,
+  getAvailableModelCatalog,
   getCurrentModelConfig,
   getPendingServerRequests,
   getSkillsList,
@@ -91,10 +93,9 @@ const TURN_START_FOLLOW_UP_SYNC_DELAY_MS = 3000
 const RECENT_THREAD_MESSAGE_LOAD_REUSE_MS = 2000
 const RECENT_THREAD_LIST_LOAD_REUSE_MS = 2000
 const RECENT_SKILLS_LOAD_REUSE_MS = 2000
-const REASONING_EFFORT_OPTIONS: ReasoningEffort[] = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh']
 const GLOBAL_SERVER_REQUEST_SCOPE = '__global__'
 const MODEL_FALLBACK_ID = 'gpt-5.4-mini'
-const OPENCODE_ZEN_DEFAULT_MODEL = 'big-pickle'
+const OPENCODE_ZEN_DEFAULT_MODEL = 'muse-spark-1.3-contributor-free'
 const CODEX_CLI_MISSING_MESSAGE = 'Codex CLI not found. Install @openai/codex or set CODEXUI_CODEX_COMMAND.'
 type SelectThreadResult = 'ok' | 'not-found' | 'error'
 
@@ -1435,7 +1436,7 @@ export function useDesktopState() {
     readSelectedCollaborationMode(selectedCollaborationModeByContext.value, selectedThreadId.value),
   )
   const selectedModelId = ref(readSelectedModel(selectedModelIdByContext.value, selectedThreadId.value))
-  const selectedReasoningEffort = ref<ReasoningEffort | ''>('medium')
+  const selectedReasoningEffort = ref<ReasoningEffort | ''>('')
   const selectedSpeedMode = ref<SpeedMode>('standard')
   const activeProviderId = ref('')
   const codexCliMissingError = ref('')
@@ -1909,6 +1910,7 @@ export function useDesktopState() {
         pending.skills.length > 0 ? pending.skills : undefined,
         pending.fileAttachments,
         pending.collaborationMode,
+        readProviderIdForThread(threadId),
       )
 
       scheduleRateLimitRefresh()
@@ -1925,11 +1927,12 @@ export function useDesktopState() {
     }
   }
 
+  const selectedReasoningModel = computed(() => findReasoningModel(readModelIdForThread(selectedThreadId.value), readProviderIdForThread(selectedThreadId.value)))
+  const availableReasoningEfforts = computed(() => reasoningOptions(selectedReasoningModel.value))
+  watch(selectedReasoningModel, () => setSelectedReasoningEffort(selectedReasoningEffort.value), { immediate: true, flush: 'sync' })
+
   function setSelectedReasoningEffort(effort: ReasoningEffort | ''): void {
-    if (effort && !REASONING_EFFORT_OPTIONS.includes(effort)) {
-      return
-    }
-    selectedReasoningEffort.value = effort
+    selectedReasoningEffort.value = resolveReasoningEffort(selectedReasoningModel.value, effort)
   }
 
   async function updateSelectedSpeedMode(mode: SpeedMode): Promise<void> {
@@ -1977,26 +1980,41 @@ export function useDesktopState() {
     return [`Mode: ${modeLabel}`, `Model: ${modelLabel}`, `Thinking: ${effortLabel}`, `Speed: ${speedLabel}`]
   }
 
+  let modelRefreshVersion = 0
   async function refreshModelPreferences(options?: { providerChanged?: boolean; includeProviderModels?: boolean }): Promise<void> {
+    const version = ++modelRefreshVersion
+    const threadId = selectedThreadId.value
+    const requestedEffort = selectedReasoningEffort.value
+    if (options?.providerChanged || reasoningCatalog.value.providerId !== readProviderIdForThread(threadId)) {
+      reasoningCatalog.value = { providerId: '', models: [] }
+    }
     codexCliMissingError.value = ''
     try {
       const currentConfig = await getCurrentModelConfig()
+      if (version !== modelRefreshVersion || threadId !== selectedThreadId.value) return
       const normalizedConfiguredModelId = currentConfig.model.trim()
       const normalizedProviderId = normalizeProviderContextId(currentConfig.providerId)
       activeProviderId.value = normalizedProviderId
       const targetProviderId = readProviderIdForThread(selectedThreadId.value)
       const isProviderBacked = targetProviderId !== 'codex'
       const normalizedSelectedModelId = readModelIdForThread(selectedThreadId.value)
-      const modelIds = await getAvailableModelIds({
+      const catalog = await getAvailableModelCatalog({
         includeProviderModels: isProviderBacked || options?.includeProviderModels !== false,
         requireProviderModels: isProviderBacked,
-        providerId: isProviderBacked ? targetProviderId : undefined,
+        providerId: targetProviderId,
+        configuredProviderId: normalizedProviderId,
       })
+      if (version !== modelRefreshVersion || threadId !== selectedThreadId.value || targetProviderId !== readProviderIdForThread(threadId)) return
+      const modelIds = catalog.ids
       const providerModelContextId = toProviderModelContextId(targetProviderId)
       const providerScopedModelId = providerModelContextId
         ? normalizeStoredModelId(selectedModelIdByContext.value[providerModelContextId])
         : ''
       const nextModelIds = [...modelIds]
+      if (!nextModelIds.length) {
+        const fallback = (!options?.providerChanged && normalizedSelectedModelId) || (targetProviderId === normalizedProviderId ? normalizedConfiguredModelId : '')
+        if (fallback) nextModelIds.push(fallback)
+      }
       if (
         !options?.providerChanged
         && isProviderBacked
@@ -2043,14 +2061,12 @@ export function useDesktopState() {
         saveSelectedModelMap(selectedModelIdByContext.value)
       }
 
-      if (
-        currentConfig.reasoningEffort &&
-        REASONING_EFFORT_OPTIONS.includes(currentConfig.reasoningEffort)
-      ) {
-        selectedReasoningEffort.value = currentConfig.reasoningEffort
-      }
+      reasoningCatalog.value = { providerId: targetProviderId, models: catalog.models }
+      setSelectedReasoningEffort(requestedEffort || currentConfig.reasoningEffort)
       selectedSpeedMode.value = currentConfig.speedMode
     } catch (unknownError) {
+      if (version !== modelRefreshVersion || threadId !== selectedThreadId.value) return
+      reasoningCatalog.value = { providerId: '', models: [] }
       if (isCodexCliMissingError(unknownError)) {
         codexCliMissingError.value = CODEX_CLI_MISSING_MESSAGE
       } else {
@@ -4628,7 +4644,7 @@ export function useDesktopState() {
       } else {
         scheduleAncillaryStateRefresh({
           providerChanged: options.providerChanged,
-          includeProviderModels: false,
+          includeProviderModels: true,
         })
       }
     } catch (unknownError) {
@@ -5102,6 +5118,7 @@ export function useDesktopState() {
           skills.length > 0 ? skills : undefined,
           fileAttachments,
           collaborationMode,
+          readProviderIdForThread(threadId),
         )
       } catch (unknownError) {
         if (modelId && modelId !== MODEL_FALLBACK_ID && isUnsupportedChatGptModelError(unknownError)) {
@@ -5124,6 +5141,7 @@ export function useDesktopState() {
             skills.length > 0 ? skills : undefined,
             fileAttachments,
             collaborationMode,
+            readProviderIdForThread(threadId),
           )
         } else {
           throw unknownError
@@ -5558,6 +5576,8 @@ export function useDesktopState() {
   }
 
   function stopPolling(): void {
+    ++modelRefreshVersion
+    reasoningCatalog.value = { providerId: '', models: [] }
     if (stopNotificationStream) {
       stopNotificationStream()
       stopNotificationStream = null
@@ -5677,6 +5697,7 @@ export function useDesktopState() {
     selectedCollaborationMode,
     selectedModelId,
     selectedReasoningEffort,
+    availableReasoningEfforts,
     selectedSpeedMode,
     codexCliMissingError,
     installedSkills,

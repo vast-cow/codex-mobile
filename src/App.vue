@@ -25,6 +25,28 @@
             >
               <IconTablerSearch class="sidebar-search-toggle-icon" />
             </button>
+            <button
+              class="sidebar-search-toggle"
+              :class="{ 'is-active': isSkillsRoute }"
+              type="button"
+              :aria-label="t('Skills')"
+              :title="t('Skills')"
+              :aria-current="isSkillsRoute ? 'page' : undefined"
+              @click="router.push({ name: 'skills' }); isMobile && setSidebarCollapsed(true)"
+            >
+              <IconTablerBolt class="sidebar-search-toggle-icon" />
+            </button>
+            <button
+              class="sidebar-search-toggle"
+              :class="{ 'is-active': isAutomationsRoute }"
+              type="button"
+              :aria-label="t('Automations')"
+              :title="t('Automations')"
+              :aria-current="isAutomationsRoute ? 'page' : undefined"
+              @click="router.push({ name: 'automations' }); isMobile && setSidebarCollapsed(true)"
+            >
+              <IconTablerBolt class="sidebar-search-toggle-icon" />
+            </button>
           </SidebarThreadControls>
 
           <div v-if="!isSidebarCollapsed && isSidebarSearchVisible" class="sidebar-search-bar">
@@ -47,38 +69,6 @@
               <IconTablerX class="sidebar-search-clear-icon" />
             </button>
           </div>
-
-          <button
-            v-if="!isSidebarCollapsed"
-            class="sidebar-skills-link"
-            :class="{ 'is-active': isSkillsRoute }"
-            type="button"
-            @click="router.push({ name: 'skills' }); isMobile && setSidebarCollapsed(true)"
-          >
-            <span class="sidebar-skills-link-icon" aria-hidden="true">
-              <IconTablerBolt />
-            </span>
-            <span class="sidebar-skills-link-copy">
-              <span class="sidebar-skills-link-title">{{ t('Skills') }}</span>
-              <span class="sidebar-skills-link-subtitle">{{ t('Plugins, apps, MCPs') }}</span>
-            </span>
-          </button>
-
-          <button
-            v-if="!isSidebarCollapsed"
-            class="sidebar-skills-link"
-            :class="{ 'is-active': isAutomationsRoute }"
-            type="button"
-            @click="router.push({ name: 'automations' }); isMobile && setSidebarCollapsed(true)"
-          >
-            <span class="sidebar-skills-link-icon sidebar-automations-link-icon" aria-hidden="true">
-              <IconTablerBolt />
-            </span>
-            <span class="sidebar-skills-link-copy">
-              <span class="sidebar-skills-link-title">{{ t('Automations') }}</span>
-              <span class="sidebar-skills-link-subtitle">{{ t('Scheduled work') }}</span>
-            </span>
-          </button>
 
           <SidebarThreadTree ref="sidebarThreadTreeRef" :groups="projectGroups" :project-display-name-by-id="projectDisplayNameById"
             :project-git-repo-by-name="projectGitRepoByName"
@@ -638,35 +628,6 @@
                     @change="onDirectProjectImportFileChange"
                   />
                 </div>
-                <section v-if="showFirstLaunchPluginsCard" class="new-thread-launch-card" aria-label="Plugins and Apps announcement">
-                  <div class="new-thread-launch-card-copy">
-                    <div class="new-thread-launch-card-topline">
-                      <span class="new-thread-launch-card-badge" aria-hidden="true">
-                        <IconTablerBolt />
-                      </span>
-                      <p class="new-thread-launch-card-eyebrow">{{ t('New in Codex') }}</p>
-                    </div>
-                    <h2 class="new-thread-launch-card-title">{{ t('Plugins are here') }}</h2>
-                    <p class="new-thread-launch-card-text">
-                      {{ t('Hook Codex up to Gmail, Calendar, GitHub, Slack, Browser Use, and more so it can actually help with real work right away.') }}
-                    </p>
-                    <div class="new-thread-launch-card-pills" aria-label="Example integrations">
-                      <span class="new-thread-launch-card-pill">Gmail</span>
-                      <span class="new-thread-launch-card-pill">Calendar</span>
-                      <span class="new-thread-launch-card-pill">GitHub</span>
-                      <span class="new-thread-launch-card-pill">Slack</span>
-                      <span class="new-thread-launch-card-pill">Browser Use</span>
-                    </div>
-                  </div>
-                  <div class="new-thread-launch-card-actions">
-                    <button class="new-thread-launch-card-button new-thread-launch-card-button-primary" type="button" @click="onOpenPluginsHomeCard">
-                      {{ t('Explore Plugins & Apps') }}
-                    </button>
-                    <button class="new-thread-launch-card-button" type="button" @click="dismissFirstLaunchPluginsCard">
-                      {{ t('Dismiss') }}
-                    </button>
-                  </div>
-                </section>
                 <Teleport to="body">
                   <div v-if="isExistingFolderPickerOpen" class="new-thread-open-folder-overlay" @click.self="onCloseExistingFolderPanel">
                     <div class="new-thread-open-folder" role="dialog" aria-modal="true" :aria-label="t('Select folder')" @keydown.esc.prevent="onCloseExistingFolderPanel">
@@ -686,17 +647,26 @@
                           :placeholder="t('Current folder')"
                           :title="existingFolderPathDraft || t('Unavailable')"
                           :disabled="isExistingFolderLoading || isOpeningExistingFolder"
-                          @blur="onExistingFolderPathBlur"
-                          @keydown.enter.prevent="onSubmitExistingFolderPath"
+                          @keydown.enter.prevent="onRetryExistingFolderBrowse"
                           @keydown.esc.prevent="onCloseExistingFolderPanel"
                         />
+                      </div>
+                      <div class="new-thread-open-folder-actions">
+                        <button
+                          class="new-thread-folder-action"
+                          type="button"
+                          :disabled="!resolvedExistingFolderPath || isExistingFolderLoading || isOpeningExistingFolder"
+                          @click="onRetryExistingFolderBrowse"
+                        >
+                          {{ t('Browse') }}
+                        </button>
                         <button
                           class="new-thread-folder-action new-thread-folder-action-primary"
                           type="button"
                           :disabled="!resolvedExistingFolderPath || isExistingFolderLoading || isOpeningExistingFolder"
                           @click="onConfirmExistingFolder()"
                         >
-                          {{ isOpeningExistingFolder ? t('Opening…') : t('Open') }}
+                          {{ isOpeningExistingFolder ? t('Opening…') : t('Select') }}
                         </button>
                       </div>
                       <div class="new-thread-open-folder-actions">
@@ -789,7 +759,7 @@
                             :disabled="isExistingFolderLoading || isOpeningExistingFolder"
                             @click="onConfirmExistingFolder(entry.path)"
                           >
-                            {{ t('Open') }}
+                            {{ t('Select') }}
                           </button>
                         </li>
                       </ul>
@@ -945,7 +915,10 @@
                   :collaboration-modes="availableCollaborationModes"
                   :selected-collaboration-mode="selectedCollaborationMode"
                   :models="availableModelIds" :selected-model="composerSelectedModelId"
+                  :thread-goal="route.name === 'thread' ? selectedThreadGoal : null"
+                  @edit-goal="threadGoalPanelRef?.open()"
                   :selected-reasoning-effort="selectedReasoningEffort"
+                  :reasoning-effort-options="availableReasoningEfforts"
                   :selected-speed-mode="selectedSpeedMode"
                   :is-updating-speed-mode="isUpdatingSpeedMode"
                   :skills="installedSkills"
@@ -992,6 +965,7 @@
                 </div>
 
                 <div class="composer-with-queue">
+                  <ThreadGoalPanel ref="threadGoalPanelRef" v-model:goal="selectedThreadGoal" :thread-id="selectedThreadId" />
                   <div v-if="codexCliMissingError" class="composer-runtime-error" role="alert">
                     <span>{{ t(codexCliMissingError) }}</span>
                     <a class="visible-error-feedback" :href="feedbackMailto" @click="prepareFeedbackLink($event, codexCliMissingError)">{{ t('Send feedback') }}</a>
@@ -1028,7 +1002,10 @@
                     :selected-collaboration-mode="selectedCollaborationMode"
                     :models="availableModelIds"
                     :selected-model="composerSelectedModelId"
+                    :thread-goal="route.name === 'thread' ? selectedThreadGoal : null"
+                    @edit-goal="threadGoalPanelRef?.open()"
                     :selected-reasoning-effort="selectedReasoningEffort"
+                    :reasoning-effort-options="availableReasoningEfforts"
                     :selected-speed-mode="selectedSpeedMode"
                     :is-updating-speed-mode="isUpdatingSpeedMode"
                     :skills="installedSkills"
@@ -1173,6 +1150,8 @@ import DesktopLayout from './components/layout/DesktopLayout.vue'
 import SidebarThreadTree from './components/sidebar/SidebarThreadTree.vue'
 import ContentHeader from './components/content/ContentHeader.vue'
 import ThreadComposer from './components/content/ThreadComposer.vue'
+import ThreadGoalPanel from './components/content/ThreadGoalPanel.vue'
+import type { ThreadGoal } from './api/threadGoals'
 import ThreadPendingRequestPanel from './components/content/ThreadPendingRequestPanel.vue'
 import QueuedMessages from './components/content/QueuedMessages.vue'
 import RateLimitStatus from './components/content/RateLimitStatus.vue'
@@ -1206,7 +1185,6 @@ import {
   getAccounts,
   completeCodexLogin,
   createLocalDirectory,
-  getFirstLaunchPluginsCardPreference,
   getHomeDirectory,
   getTelegramConfig,
   getProjectRootSuggestion,
@@ -1217,7 +1195,6 @@ import {
   importProjectZip,
   listLocalDirectories,
   openProjectRoot,
-  persistFirstLaunchPluginsCardPreference,
   removeAccount,
   refreshAccountsFromAuth,
   resetGitBranchToCommit,
@@ -1271,7 +1248,7 @@ type ThreadTerminalPanelExposed = {
 }
 
 type DirectoryTryItemPayload = {
-  kind: 'app' | 'plugin' | 'skill' | 'composio'
+  kind: 'app' | 'plugin' | 'skill'
   name: string
   displayName: string
   skillPath?: string
@@ -1421,6 +1398,7 @@ const {
   selectedCollaborationMode,
   selectedModelId,
   selectedReasoningEffort,
+  availableReasoningEfforts,
   selectedSpeedMode,
   codexCliMissingError,
   installedSkills,
@@ -1471,6 +1449,8 @@ const {
   rollbackSelectedThread,
 } = useDesktopState()
 
+const threadGoalPanelRef = ref<InstanceType<typeof ThreadGoalPanel> | null>(null)
+const selectedThreadGoal = ref<ThreadGoal | null>(null)
 const route = useRoute()
 const router = useRouter()
 const { isMobile } = useMobile()
@@ -1638,7 +1618,6 @@ const projectZipProgressWidth = computed(() => {
   if (!total || total <= 0) return loaded > 0 ? '55%' : '20%'
   return `${Math.min(100, Math.max(5, Math.round((loaded / total) * 100)))}%`
 })
-const showFirstLaunchPluginsCard = ref(false)
 const freeModeEnabled = ref(false)
 const freeModeLoading = ref(false)
 const freeModeCustomKey = ref('')
@@ -1835,17 +1814,6 @@ function buildThreadContextTooltip(usage: UiThreadTokenUsage | null): string {
   }
 
   return lines.join('\n')
-}
-
-function dismissFirstLaunchPluginsCard(): void {
-  if (!showFirstLaunchPluginsCard.value) return
-  showFirstLaunchPluginsCard.value = false
-  void persistFirstLaunchPluginsCardPreference(true)
-}
-
-function onOpenPluginsHomeCard(): void {
-  dismissFirstLaunchPluginsCard()
-  void router.push({ name: 'skills', query: { tab: 'plugins' } })
 }
 
 const threadContextBadgeState = computed(() => {
@@ -2136,7 +2104,6 @@ onMounted(() => {
   darkModeMediaQuery?.addEventListener('change', applyDarkMode)
   void initialize()
   void loadHomeDirectory()
-  void loadFirstLaunchPluginsCardPreference()
   void loadWorkspaceRootOptionsState()
   void refreshDefaultProjectName()
   void refreshTelegramConfig()
@@ -2295,10 +2262,6 @@ async function refreshTelegramConfig(): Promise<void> {
   }
 }
 
-async function loadFirstLaunchPluginsCardPreference(): Promise<void> {
-  const preference = await getFirstLaunchPluginsCardPreference()
-  showFirstLaunchPluginsCard.value = preference.dismissed !== true
-}
 
 function parseTelegramAllowedUserIdsInput(value: string): Array<number | '*'> {
   const rawEntries = value
@@ -3860,27 +3823,8 @@ function onToggleHiddenFolders(): void {
 
 function onRetryExistingFolderBrowse(): void {
   const currentPath = resolvedExistingFolderPath.value
-  if (!isExistingFolderPickerOpen.value || !currentPath || isExistingFolderLoading.value) return
+  if (!isExistingFolderPickerOpen.value || !currentPath || isExistingFolderLoading.value || isOpeningExistingFolder.value) return
   void loadExistingFolderListing(currentPath)
-}
-
-function onExistingFolderPathBlur(): void {
-  if (!isExistingFolderPickerOpen.value || isExistingFolderLoading.value || isOpeningExistingFolder.value) return
-  const draftedPath = resolvedExistingFolderPath.value
-  const currentPath = existingFolderBrowsePath.value.trim()
-  if (!draftedPath || draftedPath === currentPath) return
-  void loadExistingFolderListing(draftedPath)
-}
-
-function onSubmitExistingFolderPath(): void {
-  const draftedPath = resolvedExistingFolderPath.value
-  const currentPath = existingFolderBrowsePath.value.trim()
-  if (!draftedPath) return
-  if (draftedPath !== currentPath) {
-    void loadExistingFolderListing(draftedPath)
-    return
-  }
-  void onConfirmExistingFolder(draftedPath)
 }
 
 async function onConfirmExistingFolder(path = resolvedExistingFolderPath.value): Promise<void> {
@@ -4918,8 +4862,7 @@ function buildDirectoryTryPrompt(payload: DirectoryTryItemPayload): string {
     ? 'skill'
     : payload.kind === 'plugin'
       ? 'plugin'
-      : payload.kind === 'composio'
-        ? 'Composio connector'
+
         : 'app'
   return `Test ${label} ${itemType}. Give me a list of what it can do and one useful example.`
 }
@@ -5124,8 +5067,6 @@ async function loadWorktreeBranches(sourceCwd: string): Promise<void> {
   display: none;
 }
 
-
-
 .content-error {
   @apply m-0 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700;
 }
@@ -5263,57 +5204,12 @@ async function loadWorktreeBranches(sourceCwd: string): Promise<void> {
   display: none;
 }
 
-.new-thread-launch-card {
-  @apply mt-4 w-full max-w-3xl rounded-[28px] border border-emerald-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.2),_transparent_42%),linear-gradient(135deg,_#f4fff8,_#ffffff_58%)] px-5 py-5 text-left shadow-[0_18px_50px_-28px_rgba(5,150,105,0.45)];
-}
 
-.new-thread-launch-card-copy {
-  @apply flex flex-col gap-2;
-}
 
-.new-thread-launch-card-topline {
-  @apply flex items-center gap-2;
-}
 
-.new-thread-launch-card-badge {
-  @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-emerald-700 text-white shadow-[0_12px_28px_-18px_rgba(5,150,105,0.9)];
-}
 
-.new-thread-launch-card-badge :deep(svg) {
-  @apply h-4 w-4;
-}
 
-.new-thread-launch-card-eyebrow {
-  @apply m-0 text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700;
-}
 
-.new-thread-launch-card-title {
-  @apply m-0 text-xl font-semibold leading-tight text-zinc-950 sm:text-2xl;
-}
-
-.new-thread-launch-card-text {
-  @apply m-0 max-w-2xl text-sm leading-6 text-zinc-700 sm:text-[15px];
-}
-
-.new-thread-launch-card-actions {
-  @apply mt-4 flex flex-wrap items-center gap-2;
-}
-
-.new-thread-launch-card-pills {
-  @apply mt-1 flex flex-wrap gap-2;
-}
-
-.new-thread-launch-card-pill {
-  @apply inline-flex items-center rounded-full border border-emerald-100 bg-white/80 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-700;
-}
-
-.new-thread-launch-card-button {
-  @apply inline-flex h-10 items-center justify-center rounded-full border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50;
-}
-
-.new-thread-launch-card-button-primary {
-  @apply border-emerald-700 bg-emerald-700 text-white hover:bg-emerald-600;
-}
 
 :global(:root.dark) .new-thread-launch-card {
   @apply border-emerald-900/80 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.2),_transparent_38%),linear-gradient(135deg,_rgba(6,78,59,0.32),_rgba(24,24,27,0.96)_58%)] shadow-[0_24px_64px_-34px_rgba(16,185,129,0.35)];
